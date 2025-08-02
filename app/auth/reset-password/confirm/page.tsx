@@ -41,7 +41,8 @@ function ResetPasswordConfirmContent() {
     // Verify token validity
     const verifyToken = async () => {
       try {
-        const response = await fetch("/api/auth/verify-reset-token", {
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://technexus-2.onrender.com';
+        const response = await fetch(`${baseUrl}/api/auth/verify-reset-token`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -82,7 +83,8 @@ function ResetPasswordConfirmContent() {
     setIsLoading(true)
 
     try {
-      const response = await fetch("/api/auth/reset-password/confirm", {
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://technexus-2.onrender.com';
+      const response = await fetch(`${baseUrl}/api/auth/reset-password/confirm`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

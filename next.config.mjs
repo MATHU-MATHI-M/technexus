@@ -13,18 +13,11 @@ const nextConfig = {
   experimental: {
     serverActions: true,
   },
-  async redirects() {
+  async rewrites() {
     return [
       {
         source: '/auth/reset-password/confirm',
-        has: [
-          {
-            type: 'query',
-            key: 'token',
-          },
-        ],
-        permanent: false,
-        destination: '/auth/reset-password/confirm/:token',
+        destination: '/auth/reset-password/confirm/page',
       },
     ];
   },

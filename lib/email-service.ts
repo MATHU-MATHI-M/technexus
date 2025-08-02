@@ -15,7 +15,8 @@ const transporter = nodemailer.createTransport({
 });
 
 export async function sendResetPasswordEmail(email: string, token: string) {
-  const resetUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/auth/reset-password/confirm?token=${token}`;
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://technexus-2.onrender.com';
+  const resetUrl = `${baseUrl}/auth/reset-password/confirm?token=${token}`;
 
   const mailOptions = {
     from: process.env.SMTP_USER,
