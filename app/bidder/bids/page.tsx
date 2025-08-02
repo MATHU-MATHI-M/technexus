@@ -1,9 +1,15 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/components/auth-provider"
+import type { TokenPayload } from "@/lib/auth"
+
 import { Button } from "@/components/ui/button"
+
+interface User extends TokenPayload {
+  token: string;
+}
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -40,16 +46,7 @@ export default function BidderBidsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
 
-  useEffect(() => {
-    if (!user || user.userType !== "bidder") {
-      router.push("/auth/signin")
-      return
-    }
-
-    fetchMyBids()
-  }, [user, router])
-
-  const fetchMyBids = async () => {
+  const fetchMyBids = useCallback(async () => {
     try {
       setLoading(true)
       const response = await fetch("/api/bids/my-bids", {
@@ -63,25 +60,22 @@ export default function BidderBidsPage() {
       }
 
       const data = await response.json()
-      console.log("Fetched bids:", data)  // Debug log
       setBids(data.bids || [])
     } catch (error) {
       console.error("Error fetching bids:", error)
     } finally {
       setLoading(false)
     }
-  }
+  }, [user])
 
-      if (response.ok) {
-        const data = await response.json()
-        setBids(data.bids || [])
-      }
-    } catch (error) {
-      console.error("Error fetching my bids:", error)
-    } finally {
-      setLoading(false)
+  useEffect(() => {
+    if (!user || user.userType !== "bidder") {
+      router.push("/auth/signin")
+      return
     }
-  }
+
+    fetchMyBids()
+  }, [user, router, fetchMyBids])
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -93,13 +87,10 @@ export default function BidderBidsPage() {
         return "bg-red-100 text-red-800"
       case "withdrawn":
         return "bg-gray-100 text-gray-800"
-      default:
-        return "bg-blue-100 text-blue-800"
-    }
       case "awarded":
         return "bg-purple-100 text-purple-800"
       default:
-        return "bg-gray-100 text-gray-800"
+        return "bg-blue-100 text-blue-800"
     }
   }
 
