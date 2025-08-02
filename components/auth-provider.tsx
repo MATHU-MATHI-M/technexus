@@ -9,6 +9,7 @@ interface User {
   email: string
   companyName: string
   userType: "tender" | "bidder"
+  token: string  // Add token field
   contactNumber?: string
   address?: string
   bio?: string
@@ -96,7 +97,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (response.ok) {
         const data = await response.json()
         setUser({
+          ...data.user,
           id: data.user._id,
+          token: authToken,
           email: data.user.email,
           companyName: data.user.companyName,
           userType: data.user.userType,
@@ -132,11 +135,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const login = (authToken: string, userData: User) => {
-    setToken(authToken)
-    setUser(userData)
-    localStorage.setItem("auth_token", authToken)
-    localStorage.setItem("auth_user", JSON.stringify(userData))
+  const login = (token: string, userData: User) => {
+    const userWithToken = { ...userData, token }
+    setToken(token)
+    setUser(userWithToken)
+    localStorage.setItem("auth_token", token)
+    localStorage.setItem("auth_user", JSON.stringify(userWithToken))
   }
 
   const logout = () => {

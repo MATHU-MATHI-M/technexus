@@ -43,15 +43,20 @@ export default function BidderBidsPage() {
   const router = useRouter()
   const [bids, setBids] = useState<Bid[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
 
   const fetchMyBids = useCallback(async () => {
     try {
       setLoading(true)
+      if (!user) {
+        throw new Error("Not authenticated")
+      }
+      
       const response = await fetch("/api/bids/my-bids", {
         headers: {
-          Authorization: `Bearer ${user?.token}`,
+          Authorization: `Bearer ${user.token}`,
         },
       })
 
@@ -63,6 +68,7 @@ export default function BidderBidsPage() {
       setBids(data.bids || [])
     } catch (error) {
       console.error("Error fetching bids:", error)
+      setError(error instanceof Error ? error.message : "Failed to fetch bids")
     } finally {
       setLoading(false)
     }
@@ -103,6 +109,21 @@ export default function BidderBidsPage() {
   }
 
   const filteredBids = getFilteredBids()
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center p-4">
+          <AlertCircle className="h-10 w-10 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold mb-2">Error</h2>
+          <p className="text-muted-foreground">{error}</p>
+          <Button onClick={() => window.location.reload()} className="mt-4">
+            Try Again
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   if (loading) {
     return (
