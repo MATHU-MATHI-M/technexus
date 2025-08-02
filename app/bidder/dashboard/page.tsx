@@ -70,27 +70,50 @@ export default function BidderDashboard() {
         setLoadingBids(true)
         
         // Fetch tenders
-        const response = await fetch("/api/projects")
-        if (response.ok) {
-          const data = await response.json()
-          const projects = data.projects || []
-          setTenders(projects)
-          await checkBidStatuses(projects)
+        const token = localStorage.getItem("auth_token")
+        if (!token) {
+          throw new Error("No auth token found")
         }
 
-        // Fetch bids
-        const token = localStorage.getItem("auth_token")
-        if (token) {
-          const bidsResponse = await fetch("/api/bids/my-bids", {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          })
-          if (bidsResponse.ok) {
-            const data = await bidsResponse.json()
-            setBids(data.bids || [])
+        // Fetch tenders with auth
+        const response = await fetch("/api/projects", {
+          headers: {
+            Authorization: `Bearer ${token}`
           }
+        })
+        
+        if (!response.ok) {
+          if (response.status === 401) {
+            // Token expired or invalid
+            router.push("/auth/signin")
+            return
+          }
+          throw new Error(`Failed to fetch projects: ${response.statusText}`)
         }
+        
+        const data = await response.json()
+        const projects = data.projects || []
+        setTenders(projects)
+        await checkBidStatuses(projects)
+
+        // Fetch bids
+        const bidsResponse = await fetch("/api/bids/my-bids", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+        
+        if (!bidsResponse.ok) {
+          if (bidsResponse.status === 401) {
+            // Token expired or invalid
+            router.push("/auth/signin")
+            return
+          }
+          throw new Error(`Failed to fetch bids: ${bidsResponse.statusText}`)
+        }
+        
+        const bidsData = await bidsResponse.json()
+        setBids(bidsData.bids || [])
       } catch (error) {
         console.error("Error fetching initial data:", error)
         setError("Failed to load dashboard data. Please try again.")
@@ -255,25 +278,30 @@ export default function BidderDashboard() {
   }
 
   // Filter and search functions
-  const filteredTenders = tenders.filter((tender: any) => {
+  const filteredTenders = (tenders || []).filter((tender: any) => {
+    if (!tender) return false
+    
     const matchesSearch = searchTerm === "" || 
-      tender.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (tender.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       tender.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       tender.tenderCompany?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       tender.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      tender.location?.toLowerCase().includes(searchTerm.toLowerCase())
+      tender.location?.toLowerCase().includes(searchTerm.toLowerCase()))
     
     const matchesCategory = selectedCategory === "all" || tender.category === selectedCategory
     const matchesStatus = selectedStatus === "all" || tender.status === selectedStatus
     
-    return matchesSearch && matchesCategory && matchesStatus && (tender.status === "active" || tender.status === "open")
+    return matchesSearch && matchesCategory && matchesStatus && 
+           (tender.status === "active" || tender.status === "open")
   })
 
-  const filteredBids = bids.filter((bid: any) => {
+  const filteredBids = (bids || []).filter((bid: any) => {
+    if (!bid || !bid.project) return false
+    
     const matchesSearch = searchTerm === "" || 
-      bid.project?.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      bid.project?.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      bid.project?.category?.toLowerCase().includes(searchTerm.toLowerCase())
+      (bid.project.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      bid.project.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      bid.project.category?.toLowerCase().includes(searchTerm.toLowerCase()))
     
     const matchesStatus = selectedStatus === "all" || bid.status === selectedStatus
     

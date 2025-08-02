@@ -64,6 +64,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
 
+  const validateToken = useCallback(async (authToken: string) => {
+    try {
+      const response = await fetch("/api/auth/validate", {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      })
+      return response.ok
+    } catch (error) {
+      console.error("Token validation error:", error)
+      return false
+    }
+  }, [])
+
   useEffect(() => {
     const initAuth = async () => {
       try {
@@ -72,6 +86,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (!storedToken || !storedUser) {
           setIsLoading(false)
+          return
+        }
+
+        // Validate token first
+        const isValidToken = await validateToken(storedToken)
+        if (!isValidToken) {
+          clearAuth()
+          setIsLoading(false)
+          router.push("/auth/signin")
           return
         }
 
