@@ -36,9 +36,6 @@ interface QuickQuestion {
   icon: React.ReactNode
 }
 
-const COHERE_API_KEY = "grq7KQ5LsX3sWYo4cZEaN8iYwv7HYm80zbWk588A"
-const COHERE_API_URL = "https://api.cohere.ai/v1/chat"
-
 const quickQuestions: QuickQuestion[] = [
   {
     id: "1",
@@ -210,8 +207,24 @@ export default function HelpChatbot() {
 
       {/* Chatbot Interface */}
       {isOpen && (
-        <div className="fixed bottom-24 right-6 z-50 w-96 h-[600px] bg-white rounded-lg shadow-2xl border border-gray-200 flex flex-col">
+        <div className="fixed bottom-24 right-6 z-50 w-96 h-[600px] bg-white rounded-lg shadow-2xl border border-gray-200 flex flex-col overflow-hidden">
           {/* Header */}
+          <style jsx global>{`
+            .chat-scrollbar::-webkit-scrollbar {
+              width: 6px;
+            }
+            .chat-scrollbar::-webkit-scrollbar-track {
+              background: #f1f1f1;
+              border-radius: 3px;
+            }
+            .chat-scrollbar::-webkit-scrollbar-thumb {
+              background: #888;
+              border-radius: 3px;
+            }
+            .chat-scrollbar::-webkit-scrollbar-thumb:hover {
+              background: #555;
+            }
+          `}</style>
           <CardHeader className="bg-primary text-white rounded-t-lg pb-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
@@ -228,8 +241,8 @@ export default function HelpChatbot() {
           </CardHeader>
 
           {/* Messages */}
-          <CardContent className="flex-1 p-0">
-            <ScrollArea className="h-full">
+          <CardContent className="flex-1 p-0 overflow-hidden">
+            <ScrollArea className="h-full overflow-y-auto pr-4" style={{ maxHeight: 'calc(600px - 180px)' }}>
               <div className="p-4 space-y-4">
                 {messages.map((message) => (
                   <div
