@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
 import { verifyToken } from "@/lib/auth"
-import { VerificationService } from "@/lib/verification-service"
+import { approveVerification } from "@/lib/verification-service"
 import { ObjectId } from "mongodb"
 
 export async function POST(request: NextRequest) {
