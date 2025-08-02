@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
 import { verifyToken } from "@/lib/auth"
 import { ObjectId } from "mongodb"
+import { getUnreadNotifications, markNotificationAsRead } from "@/lib/notifications"
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,6 +16,8 @@ export async function GET(request: NextRequest) {
     if (!payload) {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 })
     }
+
+    const notifications = await getUnreadNotifications(payload.userId)
 
     const { searchParams } = new URL(request.url)
     const limit = parseInt(searchParams.get("limit") || "20")

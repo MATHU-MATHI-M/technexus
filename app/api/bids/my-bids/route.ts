@@ -18,28 +18,28 @@ export async function GET(request: NextRequest) {
     const db = await getDatabase()
     const bidsCollection = db.collection("bids")
 
-    // Get bids with project details
+    // Get bids with tender details
     const bids = await bidsCollection
       .aggregate([
         { $match: { bidderId: payload.userId } },
         {
           $lookup: {
-            from: "projects",
-            localField: "projectId",
+            from: "tenders",
+            localField: "tenderId",
             foreignField: "_id",
-            as: "project"
+            as: "tender"
           }
         },
-        { $unwind: "$project" },
+        { $unwind: { path: "$tender", preserveNullAndEmptyArrays: true } },
         {
           $project: {
             _id: 1,
             bidAmount: 1,
-            proposal: 1,
+            documents: 1,
             status: 1,
-            aiScore: 1,
-            createdAt: 1,
-            project: {
+            submittedAt: 1,
+            updatedAt: 1,
+            tender: {
               _id: 1,
               title: 1,
               category: 1,

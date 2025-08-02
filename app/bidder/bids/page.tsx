@@ -30,6 +30,44 @@ export default function BidderBidsPage() {
 
   const fetchMyBids = async () => {
     try {
+      setLoading(true)
+      const response = await fetch("/api/bids/my-bids", {
+        headers: {
+          Authorization: `Bearer ${user?.token}`,
+        },
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch bids")
+      }
+
+      const data = await response.json()
+      console.log("Fetched bids:", data)  // Debug log
+      setBids(data.bids || [])
+    } catch (error) {
+      console.error("Error fetching bids:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchMyBids = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch("/api/bids/my-bids", {
+        headers: {
+          Authorization: `Bearer ${user?.token}`,
+        },
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch bids")
+      }
+
+      const data = await response.json()
+      console.log("Fetched bids:", data)  // Debug log
+      setBids(data.bids || [])
+    try {
       const token = localStorage.getItem("auth_token")
       if (!token) return
 

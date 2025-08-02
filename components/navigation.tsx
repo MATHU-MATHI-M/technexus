@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation"
 import { useAuth } from "@/components/auth-provider"
 import { Button } from "@/components/ui/button"
 import { LogoutButton } from "@/components/logout-button"
-import { NotificationBell } from "@/components/notifications"
+import { NotificationBell } from "@/components/notifications/notification-bell"
 import {
   Building2,
   Plus,

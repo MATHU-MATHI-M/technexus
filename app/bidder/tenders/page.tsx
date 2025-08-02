@@ -20,14 +20,40 @@ export default function TendersPage() {
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [budgetFilter, setBudgetFilter] = useState("all")
 
+  const [userProfile, setUserProfile] = useState(null)
+
   useEffect(() => {
     if (!user || user.userType !== "bidder") {
       router.push("/auth/signin")
       return
     }
 
+    // Fetch user profile first
+    const fetchUserProfile = async () => {
+      try {
+        const response = await fetch('/api/user/profile')
+        const data = await response.json()
+        setUserProfile(data.profile)
+      } catch (error) {
+        console.error('Error fetching user profile:', error)
+      }
+    }
+
+    fetchUserProfile()
     fetchTenders()
   }, [user, router])
+
+  useEffect(() => {
+    if (tenders.length > 0 && userProfile) {
+      // Filter tenders based on user's bidder type
+      const filteredTenders = filterTendersByBidderType(
+        tenders,
+        userProfile.bidderType,
+        userProfile.experience?.years
+      )
+      setTenders(filteredTenders)
+    }
+  }, [userProfile])
 
   const fetchTenders = async () => {
     try {

@@ -20,6 +20,7 @@ export default function SignUpPage() {
     confirmPassword: "",
     companyName: "",
     userType: "",
+    bidderType: ""
   })
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
@@ -135,20 +136,31 @@ export default function SignUpPage() {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="userType">Account Type</Label>
-              <Select
-                value={formData.userType}
-                onValueChange={(value) => setFormData({ ...formData, userType: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select account type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="tender">Tender Issuer</SelectItem>
-                  <SelectItem value="bidder">Bidder/Contractor</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="userType">Account Type</Label>
+                <Select
+                  value={formData.userType}
+                  onValueChange={(value) => setFormData({ ...formData, userType: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select account type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="tender">Tender Issuer</SelectItem>
+                    <SelectItem value="bidder">Bidder/Contractor</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {formData.userType === "bidder" && (
+                <div className="space-y-2">
+                  <BidderTypeSelection 
+                    onSelect={(type) => setFormData({ ...formData, bidderType: type })}
+                    selectedType={formData.bidderType}
+                  />
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
