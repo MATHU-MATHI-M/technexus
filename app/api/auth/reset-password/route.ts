@@ -36,7 +36,8 @@ export async function POST(request: NextRequest) {
       )
 
       // Send reset email
-      const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL}/auth/reset-password/confirm?token=${resetToken}`
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://technexus-2.onrender.com';
+      const resetUrl = `${baseUrl}/auth/reset-password/confirm?token=${resetToken}`
 
       const emailContent = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">

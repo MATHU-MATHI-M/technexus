@@ -5,8 +5,8 @@ export async function POST(request: NextRequest) {
   try {
     const { token } = await request.json()
 
-    if (!token) {
-      return NextResponse.json({ error: "Token is required" }, { status: 400 })
+    if (!token || typeof token !== 'string' || token.length !== 64) {
+      return NextResponse.json({ error: "Invalid token format" }, { status: 400 })
     }
 
     const db = await getDatabase()

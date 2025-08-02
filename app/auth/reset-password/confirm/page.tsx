@@ -65,7 +65,18 @@ function ResetPasswordConfirmContent() {
     if (password !== confirmPassword) {
       toast({
         title: "Error",
-        description: "Passwords don't match",
+        description: "Passwords don't match. Please ensure both passwords are the same.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Password validation
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/
+    if (!passwordRegex.test(password)) {
+      toast({
+        title: "Invalid Password",
+        description: "Password must be at least 8 characters long and include uppercase, lowercase, numbers, and special characters.",
         variant: "destructive",
       })
       return

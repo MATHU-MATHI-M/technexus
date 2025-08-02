@@ -10,6 +10,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Token and password are required" }, { status: 400 })
     }
 
+    // Validate password strength
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/
+    if (!passwordRegex.test(password)) {
+      return NextResponse.json({ 
+        error: "Password must be at least 8 characters long and include uppercase, lowercase, numbers, and special characters" 
+      }, { status: 400 })
+    }
+
     const db = await getDatabase()
     const usersCollection = db.collection("users")
 
