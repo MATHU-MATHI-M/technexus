@@ -46,15 +46,61 @@ export default function BidderDashboard() {
   const [selectedStatus, setSelectedStatus] = useState("all")
 
   useEffect(() => {
-    if (!user && !isLoading) {
+    // Wait for authentication to complete
+    if (isLoading) {
+      return
+    }
+
+    // Redirect if no user
+    if (!user) {
       router.push("/auth/signin")
       return
     }
 
-    if (user && user.userType !== "bidder") {
+    // Check user type
+    if (user.userType !== "bidder") {
       setError("Access denied. This page is only for bidders.")
       return
     }
+
+    // Initialize data loading
+    const fetchInitialData = async () => {
+      try {
+        setLoadingTenders(true)
+        setLoadingBids(true)
+        
+        // Fetch tenders
+        const response = await fetch("/api/projects")
+        if (response.ok) {
+          const data = await response.json()
+          const projects = data.projects || []
+          setTenders(projects)
+          await checkBidStatuses(projects)
+        }
+
+        // Fetch bids
+        const token = localStorage.getItem("auth_token")
+        if (token) {
+          const bidsResponse = await fetch("/api/bids/my-bids", {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          })
+          if (bidsResponse.ok) {
+            const data = await bidsResponse.json()
+            setBids(data.bids || [])
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching initial data:", error)
+        setError("Failed to load dashboard data. Please try again.")
+      } finally {
+        setLoadingTenders(false)
+        setLoadingBids(false)
+      }
+    }
+
+    fetchInitialData()
   }, [user, isLoading, router])
 
   // Check bid status for each project
@@ -88,59 +134,7 @@ export default function BidderDashboard() {
     setBidStatuses(statuses)
   }
 
-  // Fetch available tenders
-  useEffect(() => {
-    const fetchTenders = async () => {
-      if (!user || user.userType !== "bidder") return
-
-      try {
-        const response = await fetch("/api/projects")
-        if (response.ok) {
-          const data = await response.json()
-          const projects = data.projects || []
-          setTenders(projects)
-          
-          // Check bid status for each project
-          await checkBidStatuses(projects)
-        }
-      } catch (error) {
-        console.error("Error fetching tenders:", error)
-        setError("Failed to load tenders. Please try again.")
-      } finally {
-        setLoadingTenders(false)
-      }
-    }
-
-    fetchTenders()
-  }, [user])
-
-  // Fetch user's bids
-  useEffect(() => {
-    const fetchBids = async () => {
-      if (!user || user.userType !== "bidder") return
-
-      try {
-        const token = localStorage.getItem("auth_token")
-        if (!token) return
-
-        const response = await fetch("/api/bids/my-bids", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        })
-        if (response.ok) {
-          const data = await response.json()
-          setBids(data.bids || [])
-        }
-      } catch (error) {
-        console.error("Error fetching bids:", error)
-      } finally {
-        setLoadingBids(false)
-      }
-    }
-
-    fetchBids()
-  }, [user])
+  // Remove the duplicate useEffects since we've moved their logic to the main useEffect
 
   if (isLoading) {
     return (
