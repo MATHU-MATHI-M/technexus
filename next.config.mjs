@@ -10,9 +10,8 @@ const nextConfig = {
     unoptimized: true,
   },
   output: 'standalone',
-  experimental: {
-    serverActions: true,
-  },
+  // Server Actions are enabled by default in Next.js 14
+  experimental: {},
   async rewrites() {
     return [
       {

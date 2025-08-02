@@ -17,8 +17,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 })
     }
 
-    const notifications = await getUnreadNotifications(payload.userId)
-
     const { searchParams } = new URL(request.url)
     const limit = parseInt(searchParams.get("limit") || "20")
     const unreadOnly = searchParams.get("unreadOnly") === "true"
@@ -31,7 +29,7 @@ export async function GET(request: NextRequest) {
       query.read = false
     }
 
-    const notifications = await notificationsCollection
+    const userNotifications = await notificationsCollection
       .find(query)
       .sort({ createdAt: -1 })
       .limit(limit)
@@ -43,9 +41,9 @@ export async function GET(request: NextRequest) {
     })
 
     return NextResponse.json({
-      notifications,
+      notifications: userNotifications,
       unreadCount,
-      total: notifications.length
+      total: userNotifications.length
     })
 
   } catch (error) {

@@ -8,13 +8,34 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Users, Search, Filter, Calendar, Building2, DollarSign, Eye, TrendingUp, FileText } from "lucide-react"
+import { FileText, Search, Clock, CheckCircle, XCircle, AlertCircle, ArrowLeft, Building2, Eye, Calendar, DollarSign, TrendingUp } from "lucide-react"
 import Link from "next/link"
+
+interface Bid {
+  _id: string
+  tenderId: string
+  tender: {
+    title: string
+    deadline: string
+    budget: {
+      min: number
+      max: number
+      currency: string
+    }
+  }
+  bidAmount: number
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'WITHDRAWN'
+  submittedAt: string
+  documents?: Array<{
+    name: string
+    url: string
+  }>
+}
 
 export default function BidderBidsPage() {
   const { user } = useAuth()
   const router = useRouter()
-  const [bids, setBids] = useState([])
+  const [bids, setBids] = useState<Bid[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
@@ -51,32 +72,6 @@ export default function BidderBidsPage() {
     }
   }
 
-  const fetchMyBids = async () => {
-    try {
-      setLoading(true)
-      const response = await fetch("/api/bids/my-bids", {
-        headers: {
-          Authorization: `Bearer ${user?.token}`,
-        },
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch bids")
-      }
-
-      const data = await response.json()
-      console.log("Fetched bids:", data)  // Debug log
-      setBids(data.bids || [])
-    try {
-      const token = localStorage.getItem("auth_token")
-      if (!token) return
-
-      const response = await fetch("/api/bids/my-bids", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-
       if (response.ok) {
         const data = await response.json()
         setBids(data.bids || [])
@@ -89,15 +84,18 @@ export default function BidderBidsPage() {
   }
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case "submitted":
-        return "bg-blue-100 text-blue-800"
-      case "under_review":
+    switch (status.toLowerCase()) {
+      case "pending":
         return "bg-yellow-100 text-yellow-800"
-      case "shortlisted":
+      case "accepted":
         return "bg-green-100 text-green-800"
       case "rejected":
         return "bg-red-100 text-red-800"
+      case "withdrawn":
+        return "bg-gray-100 text-gray-800"
+      default:
+        return "bg-blue-100 text-blue-800"
+    }
       case "awarded":
         return "bg-purple-100 text-purple-800"
       default:
@@ -105,13 +103,15 @@ export default function BidderBidsPage() {
     }
   }
 
-  const filteredBids = bids.filter((bid: any) => {
-    const matchesSearch = bid.projectTitle?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         bid.companyName?.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = statusFilter === "all" || bid.status === statusFilter
-    
-    return matchesSearch && matchesStatus
-  })
+  const getFilteredBids = () => {
+    return bids.filter((bid: Bid) => {
+      const matchesSearch = bid.tender?.title?.toLowerCase().includes(searchTerm.toLowerCase()) || false
+      const matchesStatus = statusFilter === "all" || bid.status.toLowerCase() === statusFilter.toLowerCase()
+      return matchesSearch && matchesStatus
+    })
+  }
+
+  const filteredBids = getFilteredBids()
 
   if (loading) {
     return (
@@ -205,10 +205,10 @@ export default function BidderBidsPage() {
                 <CardHeader>
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
-                      <CardTitle className="text-lg">{bid.projectTitle || "Project Title"}</CardTitle>
+                      <CardTitle className="text-lg">{bid.tender?.title || "Untitled Project"}</CardTitle>
                       <CardDescription className="mt-2">
-                        {bid.proposal?.substring(0, 100) || "No proposal details"}
-                        {bid.proposal && bid.proposal.length > 100 && "..."}
+                        {bid.tender?.category || "No category"} - Budget: {bid.tender?.budget?.currency || "$"}
+                        {bid.tender?.budget?.min?.toLocaleString()} - {bid.tender?.budget?.max?.toLocaleString()}
                       </CardDescription>
                     </div>
                     <Badge className={getStatusColor(bid.status)}>
@@ -219,21 +219,21 @@ export default function BidderBidsPage() {
                 <CardContent>
                   <div className="space-y-3">
                     <div className="flex items-center text-sm text-gray-600">
-                      <Building2 className="h-4 w-4 mr-2" />
-                      {bid.companyName || "Company Name"}
-                    </div>
-                    <div className="flex items-center text-sm text-gray-600">
                       <DollarSign className="h-4 w-4 mr-2" />
-                      Bid Amount: ${bid.bidAmount?.toLocaleString() || "Not specified"}
+                      Bid Amount: {bid.tender?.budget?.currency || "$"}{bid.bidAmount?.toLocaleString() || "Not specified"}
                     </div>
                     <div className="flex items-center text-sm text-gray-600">
                       <Calendar className="h-4 w-4 mr-2" />
-                      Submitted: {new Date(bid.createdAt).toLocaleDateString()}
+                      Submitted: {new Date(bid.submittedAt).toLocaleDateString()}
                     </div>
-                    {bid.rank && (
+                    <div className="flex items-center text-sm text-gray-600">
+                      <Clock className="h-4 w-4 mr-2" />
+                      Deadline: {new Date(bid.tender?.deadline).toLocaleDateString()}
+                    </div>
+                    {bid.documents && bid.documents.length > 0 && (
                       <div className="flex items-center text-sm text-gray-600">
-                        <TrendingUp className="h-4 w-4 mr-2" />
-                        Rank: #{bid.rank} of {bid.totalBids || "?"}
+                        <FileText className="h-4 w-4 mr-2" />
+                        {bid.documents.length} Document{bid.documents.length > 1 ? "s" : ""} Attached
                       </div>
                     )}
                   </div>
@@ -245,7 +245,7 @@ export default function BidderBidsPage() {
                         View Details
                       </Button>
                     </Link>
-                    <Link href={`/bidder/tenders/${bid.projectId}`} className="flex-1">
+                    <Link href={`/bidder/tenders/${bid.tenderId}`} className="flex-1">
                       <Button variant="outline" className="w-full">
                         <Building2 className="h-4 w-4 mr-2" />
                         View Project
