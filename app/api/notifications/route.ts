@@ -2,9 +2,15 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
 import { verifyToken } from "@/lib/auth"
 import { ObjectId } from "mongodb"
-import { getUnreadNotifications, markNotificationAsRead } from "@/lib/notifications"
 
-export async function GET(request: NextRequest) {
+// Define return types for better type safety
+interface NotificationResponse {
+  notifications: any[]
+  unreadCount: number
+  total: number
+}
+
+export async function GET(request: NextRequest): Promise<NextResponse<NotificationResponse | { error: string }>> {
   try {
     const authHeader = request.headers.get("authorization")
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -29,22 +35,26 @@ export async function GET(request: NextRequest) {
       query.read = false
     }
 
-    const userNotifications = await notificationsCollection
-      .find(query)
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .toArray()
+    try {
+      const userNotifications = await notificationsCollection
+        .find(query)
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .toArray()
 
-    const unreadCount = await notificationsCollection.countDocuments({
-      userId: payload.userId,
-      read: false
-    })
+      const unreadCount = await notificationsCollection.countDocuments({
+        userId: payload.userId,
+        read: false
+      })
 
-    return NextResponse.json({
-      notifications: userNotifications,
-      unreadCount,
-      total: userNotifications.length
-    })
+      return NextResponse.json({
+        notifications: userNotifications || [],
+        unreadCount: unreadCount || 0,
+        total: userNotifications?.length || 0
+      })
+    } catch (dbError) {
+      console.error("Database error:", dbError)
+      return NextResponse.json({ error: "Database error" }, { status: 500 })
 
   } catch (error) {
     console.error("Error fetching notifications:", error)
