@@ -39,14 +39,21 @@ export default function BidderDashboard() {
   const [loadingTenders, setLoadingTenders] = useState(true)
   const [bids, setBids] = useState([])
   const [loadingBids, setLoadingBids] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [bidStatuses, setBidStatuses] = useState({}) // Store bid status for each tender
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [selectedStatus, setSelectedStatus] = useState("all")
 
   useEffect(() => {
-    if (!isLoading && (!user || user.userType !== "bidder")) {
+    if (!user && !isLoading) {
       router.push("/auth/signin")
+      return
+    }
+
+    if (user && user.userType !== "bidder") {
+      setError("Access denied. This page is only for bidders.")
+      return
     }
   }, [user, isLoading, router])
 
@@ -98,6 +105,7 @@ export default function BidderDashboard() {
         }
       } catch (error) {
         console.error("Error fetching tenders:", error)
+        setError("Failed to load tenders. Please try again.")
       } finally {
         setLoadingTenders(false)
       }
@@ -136,10 +144,44 @@ export default function BidderDashboard() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-8">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-48 bg-gray-200 rounded"></div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center p-4">
+          <AlertCircle className="h-10 w-10 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold mb-2">Error</h2>
+          <p className="text-muted-foreground">{error}</p>
+          <div className="mt-4 space-x-4">
+            <Button onClick={() => window.location.reload()}>
+              Try Again
+            </Button>
+            <Button variant="outline" onClick={() => router.push("/auth/signin")}>
+              Back to Sign In
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!user || user.userType !== "bidder") {
+    router.push("/auth/signin")
+    return null
   }
 
   if (!user || user.userType !== "bidder") {

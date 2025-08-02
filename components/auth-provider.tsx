@@ -9,7 +9,7 @@ interface User {
   email: string
   companyName: string
   userType: "tender" | "bidder"
-  token: string  // Add token field
+  token: string
   contactNumber?: string
   address?: string
   bio?: string
@@ -65,82 +65,90 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
 
   useEffect(() => {
-    // Check for stored auth data on mount
-    const storedToken = localStorage.getItem("auth_token")
-    const storedUser = localStorage.getItem("auth_user")
-
-    if (storedToken && storedUser) {
+    const initAuth = async () => {
       try {
-        const userData = JSON.parse(storedUser)
-        setToken(storedToken)
-        setUser(userData)
+        const storedToken = localStorage.getItem("auth_token")
+        const storedUser = localStorage.getItem("auth_user")
 
-        // Verify token is still valid by fetching user profile
-        fetchUserProfile(storedToken)
+        if (!storedToken || !storedUser) {
+          setIsLoading(false)
+          return
+        }
+
+        const userData = JSON.parse(storedUser)
+        setUser(userData)
+        setToken(storedToken)
+
+        const response = await fetch("/api/user/profile", {
+          headers: {
+            Authorization: `Bearer ${storedToken}`,
+          },
+        })
+
+        if (!response.ok) {
+          throw new Error("Failed to verify token")
+        }
+
+        const data = await response.json()
+        if (!data.user) {
+          throw new Error("No user data received")
+        }
+
+        const updatedUserData = {
+          ...data.user,
+          id: data.user._id,
+          token: storedToken,
+        }
+        
+        setUser(updatedUserData)
+        localStorage.setItem("auth_user", JSON.stringify(updatedUserData))
       } catch (error) {
-        console.error("Error parsing stored user data:", error)
+        console.error("Auth error:", error)
         logout()
+      } finally {
+        setIsLoading(false)
       }
     }
 
-    setIsLoading(false)
+    initAuth()
   }, [])
 
-  const fetchUserProfile = async (authToken: string) => {
+  const login = async (token: string, userData: User) => {
     try {
+      const userWithToken = { ...userData, token }
+      setToken(token) 
+      setUser(userWithToken)
+      localStorage.setItem("auth_token", token)
+      localStorage.setItem("auth_user", JSON.stringify(userWithToken))
+
       const response = await fetch("/api/user/profile", {
         headers: {
-          Authorization: `Bearer ${authToken}`,
+          Authorization: `Bearer ${token}`,
         },
       })
 
-      if (response.ok) {
-        const data = await response.json()
-        setUser({
-          ...data.user,
-          id: data.user._id,
-          token: authToken,
-          email: data.user.email,
-          companyName: data.user.companyName,
-          userType: data.user.userType,
-          contactNumber: data.user.contactNumber,
-          address: data.user.address,
-          bio: data.user.bio,
-          website: data.user.website,
-          specializations: data.user.specializations || [],
-          // Company verification fields
-          gstNumber: data.user.gstNumber,
-          panNumber: data.user.panNumber,
-          cinNumber: data.user.cinNumber,
-          registrationNumber: data.user.registrationNumber,
-          industry: data.user.industry,
-          companySize: data.user.companySize,
-          establishedYear: data.user.establishedYear,
-          registeredAddress: data.user.registeredAddress,
-          bankAccountNumber: data.user.bankAccountNumber,
-          bankIFSC: data.user.bankIFSC,
-          bankName: data.user.bankName,
-          directorName: data.user.directorName,
-          directorPAN: data.user.directorPAN,
-          verificationStatus: data.user.verificationStatus,
-          documents: data.user.documents,
-        })
-      } else {
-        // Token is invalid
-        logout()
+      if (!response.ok) {
+        throw new Error("Failed to verify token")
       }
-    } catch (error) {
-      console.error("Error fetching user profile:", error)
-      logout()
-    }
-  }
 
-  const login = (token: string, userData: User) => {
-    const userWithToken = { ...userData, token }
-    setToken(token)
-    setUser(userWithToken)
-    localStorage.setItem("auth_token", token)
-    localStorage.setItem("auth_user", JSON.stringify(userWithToken))
+      const data = await response.json()
+      if (!data.user) {
+        throw new Error("No user data received") 
+      }
+
+      const updatedUserData = {
+        ...data.user,
+        id: data.user._id,
+        token,
+      }
+
+      setUser(updatedUserData)
+      localStorage.setItem("auth_user", JSON.stringify(updatedUserData))
+    } catch (error) {
+      console.error("Login error:", error)
+      logout()
+      throw error
+    }
   }
 
   const logout = () => {
