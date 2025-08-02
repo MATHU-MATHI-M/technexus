@@ -2,11 +2,12 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
 import { hashPassword, generateVerificationToken } from "@/lib/auth"
 import { sendVerificationEmail } from "@/lib/email"
+import { createNotification } from "@/lib/notifications"
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { email, password, companyName, userType } = body
+    const { email, password, companyName, userType, bidderType } = body
 
     // Validate input
     if (!email || !password || !companyName || !userType) {
@@ -15,6 +16,16 @@ export async function POST(request: NextRequest) {
 
     if (!["tender", "bidder"].includes(userType)) {
       return NextResponse.json({ error: "Invalid user type" }, { status: 400 })
+    }
+
+    // Validate bidder type if user is a bidder
+    if (userType === "bidder" && !bidderType) {
+      return NextResponse.json({ error: "Bidder type is required for bidder accounts" }, { status: 400 })
+    }
+
+    const validBidderTypes = ['CONTRACTOR', 'DEVELOPER', 'SUPPLIER', 'CONSULTANT', 'BUYER']
+    if (userType === "bidder" && !validBidderTypes.includes(bidderType)) {
+      return NextResponse.json({ error: "Invalid bidder type" }, { status: 400 })
     }
 
     if (password.length < 8) {
@@ -47,9 +58,15 @@ export async function POST(request: NextRequest) {
       password: hashedPassword,
       companyName,
       userType,
+      bidderType: userType === "bidder" ? bidderType : undefined,
       isVerified: false,
       verificationToken,
       verificationExpires: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+      notificationPreferences: {
+        email: true,
+        inApp: true,
+        push: false
+      },
       createdAt: new Date(),
       updatedAt: new Date(),
     }
@@ -65,6 +82,17 @@ export async function POST(request: NextRequest) {
     try {
       await sendVerificationEmail(email, verificationToken, companyName)
       console.log("✅ User created and verification email sent successfully")
+      
+      // Create welcome notification
+      await createNotification(
+        insertResult.insertedId.toString(),
+        'SIGNUP_COMPLETE',
+        'Welcome to TenderChain!',
+        `Welcome ${companyName}! Your account has been created successfully. Please verify your email to get started.`,
+        {
+          profileId: insertResult.insertedId.toString()
+        }
+      )
       
       return NextResponse.json({
         message: "User created successfully. Please check your email for verification.",

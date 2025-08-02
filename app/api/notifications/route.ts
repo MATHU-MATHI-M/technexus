@@ -55,6 +55,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<Notificati
     } catch (dbError) {
       console.error("Database error:", dbError)
       return NextResponse.json({ error: "Database error" }, { status: 500 })
+    }
 
   } catch (error) {
     console.error("Error fetching notifications:", error)

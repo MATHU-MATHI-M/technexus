@@ -1,8 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
 import { verifyToken } from "@/lib/auth"
+import { createNotification, createBulkNotifications, getInterestedBidders } from "@/lib/notifications"
 
-// GET - Fetch all projects (for bidders)
+// GET - Fetch all projects (for bidders with role-based filtering)
 export async function GET(request: NextRequest) {
   try {
     const db = await getDatabase()
@@ -13,6 +14,8 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get("status")
     const category = searchParams.get("category")
     const limit = parseInt(searchParams.get("limit") || "50")
+    const userType = searchParams.get("userType")
+    const bidderType = searchParams.get("bidderType")
 
     // Build filter
     const filter: any = {}
@@ -22,13 +25,36 @@ export async function GET(request: NextRequest) {
     // Only show active/open projects to bidders
     if (!status) filter.status = { $in: ["open", "active"] }
 
+    // Role-based filtering for bidders
+    if (userType === "bidder" && bidderType) {
+      const categoryFilters: Record<string, string[]> = {
+        'CONTRACTOR': ['Construction', 'Infrastructure', 'Renovation', 'Maintenance', 'Civil Works'],
+        'DEVELOPER': ['Software Development', 'IT Services', 'Digital Solutions', 'Technology', 'Web Development'],
+        'SUPPLIER': ['Equipment', 'Materials', 'Goods', 'Supply Chain', 'Procurement'],
+        'CONSULTANT': ['Professional Services', 'Advisory', 'Design', 'Consulting', 'Management']
+      }
+
+      const relevantCategories = categoryFilters[bidderType] || []
+      if (relevantCategories.length > 0) {
+        filter.$or = [
+          { category: { $in: relevantCategories } },
+          { category: { $regex: relevantCategories.join('|'), $options: 'i' } },
+          { specifications: { $regex: relevantCategories.join('|'), $options: 'i' } }
+        ]
+      }
+    }
+
     const projects = await projectsCollection
       .find(filter)
       .sort({ createdAt: -1 })
       .limit(limit)
       .toArray()
 
-    return NextResponse.json({ projects })
+    return NextResponse.json({ 
+      projects,
+      filtered: userType === "bidder" && bidderType ? true : false,
+      filterType: bidderType || null
+    })
   } catch (error) {
     console.error("Error fetching projects:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
@@ -95,6 +121,36 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await projectsCollection.insertOne(newProject)
+
+    // Notify the tender creator
+    await createNotification(
+      payload.userId,
+      'PROJECT_CREATED',
+      'Project Created Successfully',
+      `Your project "${title}" has been created and is now open for bids.`,
+      {
+        projectId: result.insertedId.toString()
+      }
+    )
+
+    // Notify interested bidders about the new project
+    try {
+      const interestedBidders = await getInterestedBidders(category, specifications)
+      if (interestedBidders.length > 0) {
+        await createBulkNotifications(
+          interestedBidders,
+          'NEW_TENDER_AVAILABLE',
+          'New Tender Available',
+          `A new tender "${title}" in ${category} category is now available. Budget: $${budget.toLocaleString()}`,
+          {
+            projectId: result.insertedId.toString()
+          }
+        )
+      }
+    } catch (notificationError) {
+      console.error('Error sending notifications to bidders:', notificationError)
+      // Don't fail the project creation if notifications fail
+    }
 
     return NextResponse.json({
       message: "Project created successfully",

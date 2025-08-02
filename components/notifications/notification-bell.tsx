@@ -35,11 +35,18 @@ export function NotificationBell() {
   const fetchNotifications = async () => {
     try {
       const response = await fetch('/api/notifications')
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
       const data = await response.json()
-      setNotifications(data.notifications)
-      setUnreadCount(data.notifications.filter((n: Notification) => !n.read).length)
+      const notificationsData = data.notifications || []
+      setNotifications(notificationsData)
+      setUnreadCount(notificationsData.filter((n: Notification) => !n.read).length)
     } catch (error) {
       console.error('Error fetching notifications:', error)
+      // Set empty array as fallback to prevent undefined errors
+      setNotifications([])
+      setUnreadCount(0)
     }
   }
 

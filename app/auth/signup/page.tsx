@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast"
 import { Building2, ArrowLeft } from "lucide-react"
 import Link from "next/link"
+import { BidderTypeSelection } from "@/components/bidder-type-selection"
 
 export default function SignUpPage() {
   const [formData, setFormData] = useState({
@@ -35,6 +36,16 @@ export default function SignUpPage() {
       toast({
         title: "Error",
         description: "Please fill in all fields",
+        variant: "destructive",
+      })
+      setIsLoading(false)
+      return
+    }
+
+    if (formData.userType === "bidder" && !formData.bidderType) {
+      toast({
+        title: "Error",
+        description: "Please select your bidder type",
         variant: "destructive",
       })
       setIsLoading(false)
@@ -72,6 +83,7 @@ export default function SignUpPage() {
           password: formData.password,
           companyName: formData.companyName,
           userType: formData.userType,
+          bidderType: formData.bidderType,
         }),
       })
 
